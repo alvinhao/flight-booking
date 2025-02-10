@@ -1,0 +1,54 @@
+plugins {
+    id 'java'
+}
+
+group = 'hao.alvin'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+}
+
+jar {
+    manifest {
+        attributes(
+                "Main-Class": "hao.alvin.chase.BookingSystem"
+        )
+    }
+}
+
+tasks.register("generateScript") {
+    dependsOn "jar" // Ensure JAR is built first
+
+    doLast {
+        def jarTask = tasks.named("jar", Jar)
+        def jarFileName = jarTask.get().archiveFileName.get() // Get actual JAR name
+
+        def scriptDir = layout.buildDirectory.dir("libs").get().asFile // Place script in "libs/"
+        scriptDir.mkdirs() // Ensure the directory exists
+
+        def scriptFile = new File(scriptDir, "flight_booking.sh")
+
+        scriptFile.text = """
+        #!/bin/bash
+        set -e
+        SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
+        java -jar "\$SCRIPT_DIR/$jarFileName" "\$@"
+        """.stripIndent()
+
+        scriptFile.setExecutable(true)
+    }
+}
+
+tasks.named("build") {
+    finalizedBy "generateScript"
+}
+
+test {
+    useJUnitPlatform()
+}
